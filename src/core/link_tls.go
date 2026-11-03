@@ -44,6 +44,26 @@ func (l *linkTLS) dial(ctx context.Context, url *url.URL, info linkInfo, options
 			IP:   ip,
 			Port: port,
 		}
+		if hook := l.core.config.linkDialer.DialContext; hook != nil && !ip.IsLinkLocalUnicast() {
+			conn, err := hook(ctx, "tcp", hookTarget(hostname, ip, port))
+			if err != nil {
+				return nil, err
+			}
+			if client := l.core.config.linkDialer.TLSClient; client != nil {
+				tlsConn, err := client(ctx, conn, tlsconfig)
+				if err != nil {
+					conn.Close()
+					return nil, err
+				}
+				return tlsConn, nil
+			}
+			tlsConn := tls.Client(conn, tlsconfig)
+			if err = tlsConn.HandshakeContext(ctx); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			return tlsConn, nil
+		}
 		dialer, err := l.tcp.dialerFor(addr, info.sintf)
 		if err != nil {
 			return nil, err

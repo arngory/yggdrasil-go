@@ -1,7 +1,9 @@
 package core
 
 import (
+	"context"
 	"crypto/ed25519"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/url"
@@ -37,6 +39,8 @@ func (c *Core) _applyOption(opt SetupOption) (err error) {
 		c.config._allowedPublicKeys[pk] = struct{}{}
 	case GroupPassword:
 		c.config.groupPassword = string(v)
+	case LinkDialer:
+		c.config.linkDialer = v
 	}
 	return
 }
@@ -56,6 +60,17 @@ type AllowedPublicKey ed25519.PublicKey
 type PeerFilter func(net.IP) bool
 type GroupPassword string
 
+// LinkDialer opens the outgoing peering connections when set (neko addition): a program
+// embedding the core routes them through its own dialer, for example to keep them out of
+// a VPN it provides. Pass it before any Peer. Link-local peers keep the plain dialer.
+type LinkDialer struct {
+	DialContext  func(ctx context.Context, network, address string) (net.Conn, error)
+	ListenPacket func(ctx context.Context, network, address string) (net.PacketConn, error)
+	// TLSClient, if set, runs the client handshake of tls:// links dialled through
+	// DialContext (neko: a browser ClientHello); nil uses crypto/tls.
+	TLSClient func(ctx context.Context, conn net.Conn, config *tls.Config) (net.Conn, error)
+}
+
 func (a ListenAddress) isSetupOption()    {}
 func (a Peer) isSetupOption()             {}
 func (a NodeInfo) isSetupOption()         {}
@@ -63,3 +78,4 @@ func (a NodeInfoPrivacy) isSetupOption()  {}
 func (a AllowedPublicKey) isSetupOption() {}
 func (a PeerFilter) isSetupOption()       {}
 func (a GroupPassword) isSetupOption()    {}
+func (a LinkDialer) isSetupOption()       {}
