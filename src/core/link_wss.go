@@ -41,19 +41,24 @@ func (l *linkWSS) dial(ctx context.Context, url *url.URL, info linkInfo, options
 			tlsconfig.ServerName = sni
 		}
 		u := *url
-		u.Host = net.JoinHostPort(ip.String(), fmt.Sprintf("%d", port))
+		u.Host = hookTarget(hostname, ip, port)
 		addr := &net.TCPAddr{
 			IP:   ip,
 			Port: port,
 		}
-		dialer, err := l.tcp.dialerFor(addr, info.sintf)
-		if err != nil {
-			return nil, err
+		var dialContext func(ctx context.Context, network, address string) (net.Conn, error)
+		if hook := l.core.config.linkDialer.DialContext; hook != nil && !ip.IsLinkLocalUnicast() {
+			dialContext = hook
+		} else {
+			dialer, err := l.tcp.dialerFor(addr, info.sintf)
+			if err != nil {
+				return nil, err
+			}
+			dialContext = dialer.DialContext
 		}
 		transport := &http.Transport{
 			Proxy:                 http.ProxyFromEnvironment,
-			Dial:                  dialer.Dial, // nolint:staticcheck
-			DialContext:           dialer.DialContext,
+			DialContext:           dialContext,
 			DisableKeepAlives:     true,
 			ResponseHeaderTimeout: 5 * time.Second,
 			TLSClientConfig:       tlsconfig,

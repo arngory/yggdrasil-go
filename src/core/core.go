@@ -43,6 +43,7 @@ type Core struct {
 		nodeinfoPrivacy    NodeInfoPrivacy            // immutable after startup
 		_allowedPublicKeys map[[32]byte]struct{}      // configurable after startup
 		groupPassword      string                     // immutable after startup
+		linkDialer         LinkDialer                 // immutable after startup (neko)
 	}
 	pathNotify func(ed25519.PublicKey)
 }

@@ -22,6 +22,7 @@ type linkQUIC struct {
 type linkQUICStream struct {
 	*quic.Conn
 	*quic.Stream
+	packetConn net.PacketConn // from LinkDialer, closed with the stream (neko)
 }
 
 type linkQUICListener struct {
@@ -62,17 +63,33 @@ func (l *linkQUIC) dial(ctx context.Context, url *url.URL, info linkInfo, option
 			tlsconfig.ServerName = sni
 		}
 		hostport := net.JoinHostPort(ip.String(), fmt.Sprintf("%d", port))
-		qc, err := quic.DialAddr(ctx, hostport, tlsconfig, l.quicconfig)
-		if err != nil {
-			return nil, err
+		var qc *quic.Conn
+		var packetConn net.PacketConn
+		var err error
+		if hook := l.core.config.linkDialer.ListenPacket; hook != nil && !ip.IsLinkLocalUnicast() {
+			packetConn, err = hook(ctx, "udp", hostport)
+			if err != nil {
+				return nil, err
+			}
+			qc, err = quic.Dial(ctx, packetConn, &net.UDPAddr{IP: ip, Port: port}, tlsconfig, l.quicconfig)
+			if err != nil {
+				packetConn.Close()
+				return nil, err
+			}
+		} else {
+			qc, err = quic.DialAddr(ctx, hostport, tlsconfig, l.quicconfig)
+			if err != nil {
+				return nil, err
+			}
 		}
 		qs, err := qc.OpenStreamSync(ctx)
 		if err != nil {
 			return nil, err
 		}
 		return &linkQUICStream{
-			Conn:   qc,
-			Stream: qs,
+			Conn:       qc,
+			Stream:     qs,
+			packetConn: packetConn,
 		}, nil
 	})
 }
@@ -120,4 +137,14 @@ func (l *linkQUIC) waitForStream(ctx context.Context, qc *quic.Conn, ch chan *li
 	case <-ctx.Done():
 		_ = qc.CloseWithError(1, "stream not created")
 	}
+}
+
+// Close also ends the connection and its LinkDialer socket, which nothing else owns (neko).
+func (s *linkQUICStream) Close() error {
+	err := s.Stream.Close()
+	if s.packetConn != nil {
+		_ = s.CloseWithError(0, "")
+		s.packetConn.Close()
+	}
+	return err
 }
