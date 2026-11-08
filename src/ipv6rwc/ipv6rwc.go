@@ -246,6 +246,24 @@ func (k *keyStore) readPC(p []byte) (int, error) {
 		if len(bs) < 40 {
 			continue
 		}
+		var srcAddr, dstAddr address.Address
+		var srcSubnet, dstSubnet address.Subnet
+		copy(srcAddr[:], bs[8:])
+		copy(dstAddr[:], bs[24:])
+		copy(srcSubnet[:], bs[8:])
+		copy(dstSubnet[:], bs[24:])
+		if dstAddr != k.address && dstSubnet != k.subnet {
+			continue // bad local address/subnet
+		}
+		info := k.update(ed25519.PublicKey(from.(iwt.Addr)))
+		if srcAddr != info.address && srcSubnet != info.subnet {
+			continue // bad remote address/subnet
+		}
+		// Packet Too Big goes to the packet's source address: only once that
+		// address is checked against the sender's key (neko). Before, a
+		// packet with another node's address as its source sent that node
+		// the first bytes of it, from this node: a sender could reach a node
+		// it could not reach itself, through this one.
 		k.mutex.Lock()
 		mtu := int(k.mtu)
 		k.mutex.Unlock()
@@ -261,19 +279,6 @@ func (k *keyStore) readPC(p []byte) (int, error) {
 				_, _ = k.writePC(packet)
 			}
 			continue
-		}
-		var srcAddr, dstAddr address.Address
-		var srcSubnet, dstSubnet address.Subnet
-		copy(srcAddr[:], bs[8:])
-		copy(dstAddr[:], bs[24:])
-		copy(srcSubnet[:], bs[8:])
-		copy(dstSubnet[:], bs[24:])
-		if dstAddr != k.address && dstSubnet != k.subnet {
-			continue // bad local address/subnet
-		}
-		info := k.update(ed25519.PublicKey(from.(iwt.Addr)))
-		if srcAddr != info.address && srcSubnet != info.subnet {
-			continue // bad remote address/subnet
 		}
 		n = copy(p, bs)
 		return n, nil
