@@ -41,6 +41,8 @@ func (c *Core) _applyOption(opt SetupOption) (err error) {
 		c.config.groupPassword = string(v)
 	case LinkDialer:
 		c.config.linkDialer = v
+	case DebugPrivacy:
+		c.config.debugPrivacy = v
 	}
 	return
 }
@@ -71,6 +73,13 @@ type LinkDialer struct {
 	TLSClient func(ctx context.Context, conn net.Conn, config *tls.Config) (net.Conn, error)
 }
 
+// DebugPrivacy, when true, leaves remote getSelf, getPeers and getTree
+// requests unanswered (neko addition). Without it any node with a session to
+// this one learns the keys of all its peers (getPeers) and its tree (getTree):
+// a server whose peers are its users' devices would list them to anyone. The
+// node can still send these requests itself and gets the answers.
+type DebugPrivacy bool
+
 func (a ListenAddress) isSetupOption()    {}
 func (a Peer) isSetupOption()             {}
 func (a NodeInfo) isSetupOption()         {}
@@ -79,3 +88,4 @@ func (a AllowedPublicKey) isSetupOption() {}
 func (a PeerFilter) isSetupOption()       {}
 func (a GroupPassword) isSetupOption()    {}
 func (a LinkDialer) isSetupOption()       {}
+func (a DebugPrivacy) isSetupOption()     {}
