@@ -47,4 +47,4 @@ require (
 	suah.dev/protect v1.2.4
 )
 
-replace github.com/Arceliar/ironwood => github.com/arngory/ironwood v0.0.0-20261121082210-d39eb2cbb1d4
+replace github.com/Arceliar/ironwood => github.com/arngory/ironwood v0.0.0-20261121113351-a84d78bebb15
