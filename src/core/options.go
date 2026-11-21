@@ -43,6 +43,8 @@ func (c *Core) _applyOption(opt SetupOption) (err error) {
 		c.config.linkDialer = v
 	case DebugPrivacy:
 		c.config.debugPrivacy = v
+	case PQSessions:
+		c.config.pq = &v
 	}
 	return
 }
@@ -80,6 +82,14 @@ type LinkDialer struct {
 // node can still send these requests itself and gets the answers.
 type DebugPrivacy bool
 
+// PQSessions turns on ironwood's hybrid post-quantum sessions (neko addition; arngory/ironwood, and Niko's
+// docs/design/ironwood-pq.md): a node with them and one without still talk, in classic sessions; two with them replace
+// the classic session with a PQ one. Required reports the keys a session with must be PQ (classic refused both ways);
+// nil: none. Without the option, the node's sessions are the classic ones, byte for byte.
+type PQSessions struct {
+	Required func(key ed25519.PublicKey) bool
+}
+
 func (a ListenAddress) isSetupOption()    {}
 func (a Peer) isSetupOption()             {}
 func (a NodeInfo) isSetupOption()         {}
@@ -89,3 +99,4 @@ func (a PeerFilter) isSetupOption()       {}
 func (a GroupPassword) isSetupOption()    {}
 func (a LinkDialer) isSetupOption()       {}
 func (a DebugPrivacy) isSetupOption()     {}
+func (a PQSessions) isSetupOption()       {}

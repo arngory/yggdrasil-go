@@ -2,7 +2,7 @@
 
 A fork of [yggdrasil-network/yggdrasil-go](https://github.com/yggdrasil-network/yggdrasil-go) for
 [Niko](https://github.com/arngory/niko) and [niko-server](https://github.com/arngory/niko-server). Our branch is
-**`niko`**: upstream **v0.5.15** (`2c7f050`) and the three changes below. Each is off unless the embedding program
+**`niko`**: upstream **v0.5.15** (`2c7f050`) and the changes below. Each is off unless the embedding program
 asks for it, so for anyone else the fork behaves as upstream. Upstream's branches (`develop`, `master` and the rest) are
 kept as upstream has them.
 
@@ -12,6 +12,7 @@ kept as upstream has them.
 |---|---|---|---|
 | `LinkDialer` setup option: `DialContext`, `ListenPacket`, `TLSClient` | the program opens the outgoing peering connections itself: Niko routes them around the VPN it provides, through its own DNS and dialer, with a browser ClientHello for `tls://` | `src/core/options.go`, `link*.go` | `src/core/link_dialer_test.go` |
 | `DebugPrivacy` setup option | a server whose peers are its users' devices leaves remote `getSelf`, `getPeers` and `getTree` unanswered: `getPeers` lists the key of every connected device | `src/core/options.go`, `core.go`, `proto.go` | `src/core/debugprivacy_test.go` |
+| `PQSessions` setup option | ironwood's hybrid post-quantum sessions (arngory/ironwood, Niko's `docs/design/ironwood-pq.md`): classic with nodes without them, PQ between two that have them, `Required` keys refuse classic | `src/core/options.go`, `core.go`; ironwood pinned to arngory/ironwood in `go.mod` | `src/core/pq_test.go` |
 | ipv6rwc: Packet Too Big only to a checked source | an oversize packet got an ICMPv6 Packet Too Big, with up to 512 of its bytes, before its source was checked against the sender's key: one client could have the server send another client its bytes | `src/ipv6rwc/ipv6rwc.go` | `src/ipv6rwc/ptb_test.go` |
 
 ## Who pins it
