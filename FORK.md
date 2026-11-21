@@ -15,6 +15,15 @@ kept as upstream has them.
 | `PQSessions` setup option | ironwood's hybrid post-quantum sessions (arngory/ironwood, Niko's `docs/design/ironwood-pq.md`): classic with nodes without them, PQ between two that have them, `Required` keys refuse classic | `src/core/options.go`, `core.go`; ironwood pinned to arngory/ironwood in `go.mod` | `src/core/pq_test.go` |
 | ipv6rwc: Packet Too Big only to a checked source | an oversize packet got an ICMPv6 Packet Too Big, with up to 512 of its bytes, before its source was checked against the sender's key: one client could have the server send another client its bytes | `src/ipv6rwc/ipv6rwc.go` | `src/ipv6rwc/ptb_test.go` |
 
+### Turning `PQSessions` off again
+
+A node that had PQ sessions with a peer holds that peer to PQ until the end (notAfter) of the peer's newest ML-KEM
+key, at most 48 hours, refusing classic from it meanwhile: a downgrade is not something an attacker can force. So a
+node that turns `PQSessions` off, or a release that drops it, reaches its PQ peers again only once their hold on it ends
+(up to 48 hours), unless they restart. While the option is off the node answers a PQ packet from a key it has no
+session with by a classic init (ironwood), and a PQ peer whose PQ session stays silent drops it by itself: peers that do
+not hold the node to PQ come back to classic at once.
+
 ## Who pins it
 
 | Where | Pin |
