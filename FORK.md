@@ -17,12 +17,13 @@ kept as upstream has them.
 
 ### Turning `PQSessions` off again
 
-A node that had PQ sessions with a peer holds that peer to PQ until the end (notAfter) of the peer's newest ML-KEM
-key, at most 48 hours, refusing classic from it meanwhile: a downgrade is not something an attacker can force. So a
-node that turns `PQSessions` off, or a release that drops it, reaches its PQ peers again only once their hold on it ends
-(up to 48 hours), unless they restart. While the option is off the node answers a PQ packet from a key it has no
-session with by a classic init (ironwood), and a PQ peer whose PQ session stays silent drops it by itself: peers that do
-not hold the node to PQ come back to classic at once.
+A node that had a PQ session with a peer holds that peer to PQ, refusing classic from it: a downgrade is not something
+an attacker can force. The hold follows the peer's PQ packets that open here: each one keeps it for about 48 hours
+more (the validity of an ML-KEM key), never past the end of the key the session is under plus the clock slack. So a
+node that turns `PQSessions` off, or a release that drops it, reaches a PQ peer again about 48 hours after the last PQ
+packet of its that the peer opened, or once the peer restarts. While the option is off the node answers a PQ packet
+from a key it has no session with by a classic init (ironwood), and a PQ peer whose PQ session hears nothing drops it
+within about 60 s (the session's idle timeout): peers that do not hold the node to PQ are back on classic in that time.
 
 ## Who pins it
 
