@@ -25,6 +25,11 @@ packet of its that the peer opened, or once the peer restarts. While the option 
 from a key it has no session with by a classic init (ironwood), and a PQ peer whose PQ session hears nothing drops it
 within about 60 s (the session's idle timeout): peers that do not hold the node to PQ are back on classic in that time.
 
+### One difference without PQSessions
+
+ironwood (arngory/ironwood, the PQ branch) refuses a replayed packet after a re-init that keeps the peer's keys, in
+classic sessions too: upstream opened such a replay again. Nothing changes on the wire.
+
 ## Who pins it
 
 | Where | Pin |
