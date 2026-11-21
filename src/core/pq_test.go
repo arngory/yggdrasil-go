@@ -59,8 +59,12 @@ func TestPQSessions(t *testing.T) {
 	session := func(n *Core, key ed25519.PublicKey) string {
 		for _, s := range n.PacketConn.Debug.GetSessions() {
 			if bytes.Equal(s.Key, key) {
-				if s.PQ {
+				switch {
+				case s.PQ && s.PQConfirmed:
 					return "pq"
+				case s.PQ:
+					// a PQ session the peer's traffic has not opened under yet: the classic one beside carries it
+					return "pq, unconfirmed"
 				}
 				return "classic"
 			}
