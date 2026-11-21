@@ -85,7 +85,10 @@ type DebugPrivacy bool
 // PQSessions turns on ironwood's hybrid post-quantum sessions (neko addition; arngory/ironwood, and Niko's
 // docs/design/ironwood-pq.md): a node with them and one without still talk, in classic sessions; two with them replace
 // the classic session with a PQ one. Required reports the keys a session with must be PQ (classic refused both ways);
-// nil: none. Without the option, the node's sessions are the classic ones, byte for byte.
+// nil: none. Without the option, the node's sessions are the classic ones: what it sends of its own is upstream's,
+// byte for byte, and its replies are as ironwood's PQConfig describes (an init in reply to traffic at most once in 3 s
+// a key, a repeated init answered at most once a second, a classic init in reply to PQ traffic from a key with no
+// session, which upstream's nodes never send).
 type PQSessions struct {
 	Required func(key ed25519.PublicKey) bool
 }
