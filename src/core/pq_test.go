@@ -90,3 +90,64 @@ func TestPQSessions(t *testing.T) {
 		}
 	}
 }
+
+// TestPQSessionsAnswerOnly: two nodes with PQ in answer only start no PQ session with each other (neither starts
+// one): they talk in a classic session, no PQ session ever up (neko).
+func TestPQSessionsAnswerOnly(t *testing.T) {
+	logger := GetLoggerWithPrefix("", false)
+	cfgA, cfgB := config.GenerateConfig(), config.GenerateConfig()
+	require_NoError(t, cfgA.GenerateSelfSignedCertificate())
+	require_NoError(t, cfgB.GenerateSelfSignedCertificate())
+	nodeA, err := New(cfgA.Certificate, logger, PQSessions{AnswerOnly: true})
+	require_NoError(t, err)
+	defer nodeA.Stop()
+	nodeB, err := New(cfgB.Certificate, logger, PQSessions{AnswerOnly: true})
+	require_NoError(t, err)
+	defer nodeB.Stop()
+
+	u, err := url.Parse("tcp://localhost:0")
+	require_NoError(t, err)
+	l, err := nodeA.Listen(u, "")
+	require_NoError(t, err)
+	u, err = url.Parse("tcp://" + l.Addr().String())
+	require_NoError(t, err)
+	require_NoError(t, nodeB.AddPeer(u, ""))
+	require_True(t, WaitConnected(nodeA, nodeB))
+	// each node's packets read, as an application would: unread, the delivery holds the sessions up
+	for _, n := range []*Core{nodeA, nodeB} {
+		go func(conn net.PacketConn) {
+			var buf [1024]byte
+			for t.Context().Err() == nil {
+				_, _, _ = conn.ReadFrom(buf[:])
+			}
+		}(n.PacketConn)
+	}
+
+	classic := func(n *Core, key ed25519.PublicKey) bool {
+		for _, s := range n.PacketConn.Debug.GetSessions() {
+			if bytes.Equal(s.Key, key) {
+				return !s.PQ
+			}
+		}
+		return false
+	}
+	for deadline := time.Now().Add(20 * time.Second); ; time.Sleep(100 * time.Millisecond) {
+		_, _ = nodeA.PacketConn.WriteTo([]byte("hello"), nodeB.PacketConn.LocalAddr())
+		_, _ = nodeB.PacketConn.WriteTo([]byte("back"), nodeA.PacketConn.LocalAddr())
+		if classic(nodeA, nodeB.public) && classic(nodeB, nodeA.public) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("no classic session both ways in 20 s")
+		}
+	}
+	// some more traffic: neither starts PQ on it
+	for range 20 {
+		_, _ = nodeA.PacketConn.WriteTo([]byte("hello"), nodeB.PacketConn.LocalAddr())
+		_, _ = nodeB.PacketConn.WriteTo([]byte("back"), nodeA.PacketConn.LocalAddr())
+		time.Sleep(100 * time.Millisecond)
+	}
+	if a, b := nodeA.PacketConn.PQSessionCount(), nodeB.PacketConn.PQSessionCount(); a != 0 || b != 0 {
+		t.Fatalf("PQ sessions up in answer only: A %d, B %d", a, b)
+	}
+}

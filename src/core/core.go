@@ -108,7 +108,7 @@ func New(cert *tls.Certificate, logger Logger, opts ...SetupOption) (*Core, erro
 		return nil, fmt.Errorf("error creating encryption: %w", err)
 	}
 	if pq := c.config.pq; pq != nil {
-		c.PacketConn.SetPQ(iwe.PQConfig{Enabled: true, Required: pq.Required, Logf: c.log.Warnf})
+		c.PacketConn.SetPQ(iwe.PQConfig{Enabled: true, AnswerOnly: pq.AnswerOnly, Required: pq.Required, Logf: c.log.Warnf})
 	}
 	c.proto.init(c)
 	if err := c.links.init(c); err != nil {

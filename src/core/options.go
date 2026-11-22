@@ -88,9 +88,12 @@ type DebugPrivacy bool
 // nil: none. Without the option, the node's sessions are the classic ones: what it sends of its own is upstream's,
 // byte for byte, and its replies are as ironwood's PQConfig describes (an init in reply to traffic at most once in 3 s
 // a key, a repeated init answered at most once a second, a classic init in reply to PQ traffic from a key with no
-// session, which upstream's nodes never send).
+// session, which upstream's nodes never send). AnswerOnly: PQ in answer only (ironwood's PQConfig.AnswerOnly): the
+// node starts no PQ session itself, answers the ones its peers start, and holds no key to PQ anew; a key held to PQ
+// (Required, or held before) it still starts with. Off, answer only, on: no option, AnswerOnly, the option alone.
 type PQSessions struct {
-	Required func(key ed25519.PublicKey) bool
+	Required   func(key ed25519.PublicKey) bool
+	AnswerOnly bool
 }
 
 func (a ListenAddress) isSetupOption()    {}
