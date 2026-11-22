@@ -75,8 +75,8 @@ func TestPQSessions(t *testing.T) {
 	for deadline := time.Now().Add(20 * time.Second); ; time.Sleep(100 * time.Millisecond) {
 		done := true
 		for n, w := range want {
-			_, _ = nodeA.WriteTo([]byte("hello"), n.LocalAddr())
-			_, _ = n.PacketConn.WriteTo([]byte("back"), nodeA.PacketConn.LocalAddr())
+			_, _ = nodeA.PacketConn.WriteTo([]byte("hello"), n.LocalAddr())
+			_, _ = n.PacketConn.WriteTo([]byte("back"), nodeA.LocalAddr())
 			if session(nodeA, n.public) != w || session(n, nodeA.public) != w {
 				done = false
 			}
@@ -124,7 +124,7 @@ func TestPQSessionsAnswerOnly(t *testing.T) {
 	}
 
 	classic := func(n *Core, key ed25519.PublicKey) bool {
-		for _, s := range n.PacketConn.Debug.GetSessions() {
+		for _, s := range n.Debug.GetSessions() {
 			if bytes.Equal(s.Key, key) {
 				return !s.PQ
 			}
@@ -132,8 +132,8 @@ func TestPQSessionsAnswerOnly(t *testing.T) {
 		return false
 	}
 	for deadline := time.Now().Add(20 * time.Second); ; time.Sleep(100 * time.Millisecond) {
-		_, _ = nodeA.PacketConn.WriteTo([]byte("hello"), nodeB.PacketConn.LocalAddr())
-		_, _ = nodeB.PacketConn.WriteTo([]byte("back"), nodeA.PacketConn.LocalAddr())
+		_, _ = nodeA.PacketConn.WriteTo([]byte("hello"), nodeB.LocalAddr())
+		_, _ = nodeB.PacketConn.WriteTo([]byte("back"), nodeA.LocalAddr())
 		if classic(nodeA, nodeB.public) && classic(nodeB, nodeA.public) {
 			break
 		}
@@ -143,11 +143,11 @@ func TestPQSessionsAnswerOnly(t *testing.T) {
 	}
 	// some more traffic: neither starts PQ on it
 	for range 20 {
-		_, _ = nodeA.PacketConn.WriteTo([]byte("hello"), nodeB.PacketConn.LocalAddr())
-		_, _ = nodeB.PacketConn.WriteTo([]byte("back"), nodeA.PacketConn.LocalAddr())
+		_, _ = nodeA.PacketConn.WriteTo([]byte("hello"), nodeB.LocalAddr())
+		_, _ = nodeB.PacketConn.WriteTo([]byte("back"), nodeA.LocalAddr())
 		time.Sleep(100 * time.Millisecond)
 	}
-	if a, b := nodeA.PacketConn.PQSessionCount(), nodeB.PacketConn.PQSessionCount(); a != 0 || b != 0 {
+	if a, b := nodeA.PQSessionCount(), nodeB.PQSessionCount(); a != 0 || b != 0 {
 		t.Fatalf("PQ sessions up in answer only: A %d, B %d", a, b)
 	}
 }
