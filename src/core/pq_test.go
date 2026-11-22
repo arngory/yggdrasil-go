@@ -57,7 +57,7 @@ func TestPQSessions(t *testing.T) {
 	}
 
 	session := func(n *Core, key ed25519.PublicKey) string {
-		for _, s := range n.PacketConn.Debug.GetSessions() {
+		for _, s := range n.Debug.GetSessions() {
 			if bytes.Equal(s.Key, key) {
 				switch {
 				case s.PQ && s.PQConfirmed:
@@ -75,7 +75,7 @@ func TestPQSessions(t *testing.T) {
 	for deadline := time.Now().Add(20 * time.Second); ; time.Sleep(100 * time.Millisecond) {
 		done := true
 		for n, w := range want {
-			_, _ = nodeA.PacketConn.WriteTo([]byte("hello"), n.PacketConn.LocalAddr())
+			_, _ = nodeA.WriteTo([]byte("hello"), n.LocalAddr())
 			_, _ = n.PacketConn.WriteTo([]byte("back"), nodeA.PacketConn.LocalAddr())
 			if session(nodeA, n.public) != w || session(n, nodeA.public) != w {
 				done = false
