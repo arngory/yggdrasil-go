@@ -27,15 +27,17 @@ within about 60 s (the session's idle timeout): peers that do not hold the node 
 
 ### One difference without PQSessions
 
-ironwood (arngory/ironwood, the PQ branch) refuses a replayed packet after a re-init that keeps the peer's keys, in
+ironwood (arngory/ironwood, its `main` since arngory/ironwood#4) refuses a replayed packet after a re-init that keeps the peer's keys, in
 classic sessions too: upstream opened such a replay again. Nothing changes on the wire.
 
 ## Who pins it
 
 | Where | Pin |
 |---|---|
-| niko-server `go.mod` | `replace github.com/yggdrasil-network/yggdrasil-go => github.com/arngory/yggdrasil-go v0.5.16-0.20261108201637-5afe92f15200` |
-| Niko `libcore/go.mod` | the same commit |
+| niko-server `go.mod` | `replace github.com/yggdrasil-network/yggdrasil-go => github.com/arngory/yggdrasil-go <a commit of niko>`; from the merge of `PQSessions` on, that merge commit |
+| Niko `libcore/go.mod` and the core fork's (arngory/sing-box) `go.mod` | the same commit as niko-server; both `go.mod`s name it, as only the main module's `replace` counts |
+
+v0.19.0 of niko-server was tagged with a pin on the `pq-sessions` branch (`54554bd`): that branch stays.
 
 A pin names a commit, so `niko` can move on and the pinned commit stays in its history. `niko` is never rewritten (no
 rebase, no force-push): a pin on a commit that is gone no longer builds.
