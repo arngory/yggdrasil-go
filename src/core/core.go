@@ -45,6 +45,7 @@ type Core struct {
 		groupPassword      string                     // immutable after startup
 		linkDialer         LinkDialer                 // immutable after startup (neko)
 		debugPrivacy       DebugPrivacy               // immutable after startup (neko)
+		pq                 *PQSessions                // immutable after startup (neko); nil: classic sessions
 	}
 	pathNotify func(ed25519.PublicKey)
 }
@@ -105,6 +106,9 @@ func New(cert *tls.Certificate, logger Logger, opts ...SetupOption) (*Core, erro
 		iwn.WithPathNotify(c.doPathNotify),
 	); err != nil {
 		return nil, fmt.Errorf("error creating encryption: %w", err)
+	}
+	if pq := c.config.pq; pq != nil {
+		c.SetPQ(iwe.PQConfig{Enabled: true, AnswerOnly: pq.AnswerOnly, Required: pq.Required, Logf: c.log.Warnf})
 	}
 	c.proto.init(c)
 	if err := c.links.init(c); err != nil {
