@@ -80,6 +80,12 @@ func (p *protoHandler) _handleDebug(key keyArray, bs []byte) {
 		return
 	}
 	switch bs[0] {
+	case typeDebugGetSelfRequest, typeDebugGetPeersRequest, typeDebugGetTreeRequest:
+		if p.core.config.debugPrivacy {
+			return // DebugPrivacy: no answers about this node to others
+		}
+	}
+	switch bs[0] {
 	case typeDebugDummy:
 	case typeDebugGetSelfRequest:
 		p._handleGetSelfRequest(key)

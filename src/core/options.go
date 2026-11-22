@@ -41,6 +41,10 @@ func (c *Core) _applyOption(opt SetupOption) (err error) {
 		c.config.groupPassword = string(v)
 	case LinkDialer:
 		c.config.linkDialer = v
+	case DebugPrivacy:
+		c.config.debugPrivacy = v
+	case PQSessions:
+		c.config.pq = &v
 	}
 	return
 }
@@ -71,6 +75,27 @@ type LinkDialer struct {
 	TLSClient func(ctx context.Context, conn net.Conn, config *tls.Config) (net.Conn, error)
 }
 
+// DebugPrivacy, when true, leaves remote getSelf, getPeers and getTree
+// requests unanswered (neko addition). Without it any node with a session to
+// this one learns the keys of all its peers (getPeers) and its tree (getTree):
+// a server whose peers are its users' devices would list them to anyone. The
+// node can still send these requests itself and gets the answers.
+type DebugPrivacy bool
+
+// PQSessions turns on ironwood's hybrid post-quantum sessions (neko addition; arngory/ironwood, and Niko's
+// docs/design/ironwood-pq.md): a node with them and one without still talk, in classic sessions; two with them replace
+// the classic session with a PQ one. Required reports the keys a session with must be PQ (classic refused both ways);
+// nil: none. Without the option, the node's sessions are the classic ones: what it sends of its own is upstream's,
+// byte for byte, and its replies are as ironwood's PQConfig describes (an init in reply to traffic at most once in 3 s
+// a key, a repeated init answered at most once a second, a classic init in reply to PQ traffic from a key with no
+// session, which upstream's nodes never send). AnswerOnly: PQ in answer only (ironwood's PQConfig.AnswerOnly): the
+// node starts no PQ session itself, answers the ones its peers start, and holds no key to PQ anew; a key held to PQ
+// (Required, or held before) it still starts with. Off, answer only, on: no option, AnswerOnly, the option alone.
+type PQSessions struct {
+	Required   func(key ed25519.PublicKey) bool
+	AnswerOnly bool
+}
+
 func (a ListenAddress) isSetupOption()    {}
 func (a Peer) isSetupOption()             {}
 func (a NodeInfo) isSetupOption()         {}
@@ -79,3 +104,5 @@ func (a AllowedPublicKey) isSetupOption() {}
 func (a PeerFilter) isSetupOption()       {}
 func (a GroupPassword) isSetupOption()    {}
 func (a LinkDialer) isSetupOption()       {}
+func (a DebugPrivacy) isSetupOption()     {}
+func (a PQSessions) isSetupOption()       {}

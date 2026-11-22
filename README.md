@@ -1,5 +1,9 @@
 # Yggdrasil
 
+> **This is a fork.** arngory/yggdrasil-go carries three changes for [Niko](https://github.com/arngory/niko) and
+> [niko-server](https://github.com/arngory/niko-server) on branch `niko`: what they are and who pins them is in
+> [FORK.md](FORK.md). The rest of this file is upstream's.
+
 [![Build status](https://github.com/yggdrasil-network/yggdrasil-go/actions/workflows/ci.yml/badge.svg)](https://github.com/yggdrasil-network/yggdrasil-go/actions/workflows/ci.yml)
 
 ## Introduction
