@@ -151,3 +151,63 @@ func TestPQSessionsAnswerOnly(t *testing.T) {
 		t.Fatalf("PQ sessions up in answer only: A %d, B %d", a, b)
 	}
 }
+
+// TestPQSessionsAnswerNodeOnClient: a node in answer only and a client with PQ on (Niko's default pair) get a PQ
+// session with either end holding the lower key, the classic session first or not, and traffic both ways all along
+// (ironwood round 8: the higher key starts when the lower one does not; the switch takes the classic traffic in
+// flight) (neko).
+func TestPQSessionsAnswerNodeOnClient(t *testing.T) {
+	for _, clientLower := range []bool{true, false} {
+		t.Run(map[bool]string{true: "client lower", false: "client higher"}[clientLower], func(t *testing.T) {
+			logger := GetLoggerWithPrefix("", false)
+			var cfgN, cfgC *config.NodeConfig
+			for {
+				cfgN, cfgC = config.GenerateConfig(), config.GenerateConfig()
+				require_NoError(t, cfgN.GenerateSelfSignedCertificate())
+				require_NoError(t, cfgC.GenerateSelfSignedCertificate())
+				lower := bytes.Compare(cfgC.Certificate.PrivateKey.(ed25519.PrivateKey).Public().(ed25519.PublicKey),
+					cfgN.Certificate.PrivateKey.(ed25519.PrivateKey).Public().(ed25519.PublicKey)) < 0
+				if lower == clientLower {
+					break
+				}
+			}
+			node, err := New(cfgN.Certificate, logger, PQSessions{AnswerOnly: true})
+			require_NoError(t, err)
+			defer node.Stop()
+			client, err := New(cfgC.Certificate, logger, PQSessions{})
+			require_NoError(t, err)
+			defer client.Stop()
+			u, err := url.Parse("tcp://localhost:0")
+			require_NoError(t, err)
+			l, err := node.Listen(u, "")
+			require_NoError(t, err)
+			u, err = url.Parse("tcp://" + l.Addr().String())
+			require_NoError(t, err)
+			require_NoError(t, client.AddPeer(u, ""))
+			require_True(t, WaitConnected(node, client))
+			for _, n := range []*Core{node, client} {
+				go func(conn net.PacketConn) {
+					var buf [1024]byte
+					for t.Context().Err() == nil {
+						_, _, _ = conn.ReadFrom(buf[:])
+					}
+				}(n.PacketConn)
+			}
+			pq := func(n *Core, key ed25519.PublicKey) bool {
+				for _, s := range n.Debug.GetSessions() {
+					if bytes.Equal(s.Key, key) {
+						return s.PQ && s.PQConfirmed
+					}
+				}
+				return false
+			}
+			for deadline := time.Now().Add(20 * time.Second); !pq(client, node.public) || !pq(node, client.public); time.Sleep(100 * time.Millisecond) {
+				if time.Now().After(deadline) {
+					t.Fatalf("no PQ session both ways in 20 s (client %v, node %v)", pq(client, node.public), pq(node, client.public))
+				}
+				_, _ = client.PacketConn.WriteTo([]byte("hello"), node.LocalAddr())
+				_, _ = node.PacketConn.WriteTo([]byte("back"), client.LocalAddr())
+			}
+		})
+	}
+}
